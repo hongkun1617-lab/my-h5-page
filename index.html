@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极速滑雪 - 进阶挑战</title>
+    <style>
+        :root {
+            --primary: #00d2ff;
+            --primary-dark: #00a8cc;
+            --secondary: #3a7bd5;
+            --accent: #ff6b6b;
+            --success: #4cd964;
+            --dark: #1a1a2e;
+            --light: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #333;
+            --text-light: #666;
+            --locked-gray: #e0e0e0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--light); color: var(--text-main); overflow-x: hidden; }
+        
+        /* Utility */
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; transition: all 0.3s; text-decoration: none; display: inline-block; }
+        .btn-primary { background: linear-gradient(45deg, var(--primary), var(--secondary)); color: white; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4); }
+        .btn-outline { border: 2px solid var(--primary); color: var(--primary); background: transparent; }
+        .btn-outline:hover { background: var(--primary); color: white; }
+        .btn-disabled { background: var(--locked-gray); color: #999; cursor: not-allowed; box-shadow: none; }
+        .text-center { text-align: center; }
+        .hidden { display: none !important; }
+
+        /* Header */
+        header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); position: fixed; width: 100%; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        nav { display: flex; justify-content: space-between; align-items: center; height: 70px; }
+        .logo { font-size: 24px; font-weight: 800; color: var(--secondary); display: flex; align-items: center; gap: 10px; }
+        .logo i { font-style: normal; font-size: 30px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .user-info { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .avatar { width: 35px; height: 35px; background: var(--primary); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; }
+
+        /* Hero Section */
+        .hero { height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%), url('https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80'); background-blend-mode: overlay; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: white; text-align: center; padding-top: 60px; }
+        .hero-content h1 { font-size: 4rem; margin-bottom: 20px; text-shadow: 0 4px 10px rgba(0,0,0,0.3); animation: slideDown 1s ease; }
+        .hero-content p { font-size: 1.5rem; margin-bottom: 40px; opacity: 0.9; animation: slideUp 1s ease 0.3s backwards; }
+        
+        /* Game Canvas Overlay */
+        #game-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 2000; display: none; flex-direction: column; }
+        #game-canvas { width: 100%; height: 100%; display: block; background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%); }
+        .game-ui { position: absolute; top: 20px; left: 20px; color: #333; font-weight: bold; font-size: 20px; z-index: 2001; pointer-events: none; }
+        .game-over-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 2002; display: none; width: 90%; max-width: 400px; }
+        .close-game { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.5); color: white; padding: 10px 20px; border-radius: 20px; cursor: pointer; z-index: 2001; font-weight: bold; }
+
+        /* Course/Level Cards */
+        .courses-section { padding: 80px 0; background: #fff; }
+        .section-title { text-align: center; margin-bottom: 50px; }
+        .section-title h2 { font-size: 2.5rem; color: var(--dark); margin-bottom: 10px; }
+        .section-title p { color: var(--text-light); }
+        
+        .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .course-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: all 0.4s; position: relative; border: 1px solid #eee; }
+        .course-card:hover { transform: translateY(-10px); box-shadow: 0 15px 40px rgba(0,0,0,0.1); }
+        
+        /* Locked State */
+        .course-card.locked { filter: grayscale(100%); opacity: 0.8; pointer-events: none; }
+        .course-card.locked::after { content: '🔒'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; z-index: 10; filter: grayscale(0); }
+        .course-card.locked .card-content { opacity: 0.5; }
+        
+        /* Completed State */
+        .course-card.completed { border: 2px solid var(--success); }
+        .course-card.completed .card-image::after { content: '✓ 已完成'; position: absolute; top: 10px; right: 10px; background: var(--success); color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+
+        .card-image { height: 200px; background-size: cover; background-position: center; position: relative; }
+        .card-content { padding: 25px; }
+        .card-title { font-size: 1.25rem; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .card-desc { color: var(--text-light); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5; }
+        
+        /* Progress Bar in Card */
+        .level-progress { margin-bottom: 20px; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: var(--text-light); }
+        .progress-track { width: 100%; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); width: 0%; transition: width 1s ease; }
+        .course-card.completed .progress-fill { background: var(--success); }
+
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .status-locked { background: #eee; color: #999; }
+        .status-active { background: rgba(0, 210, 255, 0.1); color: var(--primary-dark); }
+        .status-done { background: rgba(76, 217, 100, 0.1); color: var(--success); }
+
+        /* Badges Section */
+        .badges-section { padding: 60px 0; background: var(--light); }
+        .badge-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        .badge-item { width: 100px; height: 100px; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: all 0.3s; opacity: 0.5; filter: grayscale(100%); position: relative; }
+        .badge-item.unlocked { opacity: 1; filter: grayscale(0%); transform: scale(1.1); box-shadow: 0 8px 25px rgba(0,0,0,0.1); border: 2px solid var(--primary); }
+        .badge-icon { font-size: 30px; margin-bottom: 5px; }
+        .badge-name { font-size: 10px; text-align: center; color: var(--text-main); font-weight: bold; }
+        .badge-tooltip { position: absolute; bottom: -30px; background: #333; color: white; padding: 5px 10px; border-radius: 5px; font-size: 10px; opacity: 0; transition: opacity 0.3s; pointer-events: none; width: 150px; text-align: center; z-index: 100; }
+        .badge-item:hover .badge-tooltip { opacity: 1; }
+
+        /* Floating Status Panel */
+        .status-panel { position: fixed; bottom: 30px; right: 30px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 900; display: none; animation: slideInRight 0.5s ease; border-left: 5px solid var(--primary); min-width: 200px; }
+        .status-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .status-label { color: var(--text-light); }
+        .status-value { font-weight: bold; color: var(--dark); }
+
+        /* Footer */
+        footer { background: var(--dark); color: white; padding: 50px 0 20px; }
+        .footer-content { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 30px; margin-bottom: 30px; }
+        .footer-col h3 { font-size: 18px; margin-bottom: 20px; color: var(--primary); }
+        .footer-col p { color: #aaa; margin-bottom: 10px; font-size: 14px; }
+        .copyright { text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; font-size: 13px; color: #777; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-box { background: white; padding: 40px; border-radius: 20px; width: 90%; max-width: 400px; position: relative; animation: zoomIn 0.3s ease; }
+        .modal-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; text-align: center; color: var(--dark); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-light); }
+        .form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; transition: border 0.3s; }
+        .form-input:focus { border-color: var(--primary); outline: none; }
+        .modal-close { position: absolute; top: 15px; right: 15px; cursor: pointer; font-size: 20px; color: #999; }
+        
+        /* Toast Notification */
+        .toast-container { position: fixed; top: 90px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px; animation: slideInRight 0.3s ease; border-left: 4px solid var(--primary); min-width: 300px; }
+        .toast.success { border-left-color: var(--success); }
+        .toast-icon { font-size: 20px; }
+        .toast-content h4 { font-size: 14px; margin-bottom: 2px; }
+        .toast-content p { font-size: 12px; color: var(--text-light); }
+
+        /* Animations */
+        @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-content h1 { font-size: 2.5rem; }
+            .nav-links { display: none; } /* Simplified for mobile */
+            .status-panel { bottom: 10px; right: 10px; left: 10px; width: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">
+                    <i>❄️</i> 极速滑雪
+                </div>
+                <div class="nav-links">
+                    <a href="#" class="btn-text">首页</a>
+                    <a href="#courses" class="btn-text">挑战关卡</a>
+                    <a href="#badges" class="btn-text">成就徽章</a>
+                </div>
+                <div class="user-actions" id="auth-buttons">
+                    <button class="btn btn-outline" onclick="openModal('login')">登录</button>
+                    <button class="btn btn-primary" onclick="openModal('register')">注册</button>
+                </div>
+                <div class="user-info hidden" id="user-display">
+                    <div class="avatar" id="user-avatar">U</div>
+                    <span id="username-display">User</span>
+                    <button class="btn-text" style="margin-left:10px; font-size:12px; color:#666; cursor:pointer; border:none; background:none;" onclick="logout()">退出</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-content">
+            <h1>征服雪域巅峰</h1>
+            <p>从零基础到极限挑战，用你的技巧解锁更高难度的雪道！</p>
+            <button class="btn btn-primary" style="font-size: 1.2rem; padding: 15px 40px;" onclick="scrollToCourses()">开始挑战</button>
+        </div>
+    </section>
+
+    <!-- Courses/Levels Section -->
+    <section id="courses" class="courses-section">
+        <div class="container">
+            <div class="section-title">
+                <h2>挑战关卡</h2>
+                <p>积累游戏分数，解锁更高难度的滑雪挑战</p>
+            </div>
+            <div class="course-grid" id="course-grid">
+                <!-- Courses injected by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Badges Section -->
+    <section id="badges" class="badges-section">
+        <div class="container">
+            <div class="section-title">
+                <h2>成就徽章</h2>
+                <p>收集所有徽章，证明你的实力</p>
+            </div>
+            <div class="badge-grid" id="badge-grid">
+                <!-- Badges injected by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-col">
+                    <h3>极速滑雪</h3>
+                    <p>体验真实的滑雪快感，挑战自我极限。</p>
+                </div>
+                <div class="footer-col">
+                    <h3>开发者信息</h3>
+                    <p>工程师: 刘红坤</p>
+                    <p>微信: Lhk7779</p>
+                </div>
+                <div class="footer-col">
+                    <h3>联系我们</h3>
+                    <p>如有建议或反馈，请通过微信联系。</p>
+                </div>
+            </div>
+            <div class="copyright">
+                &copy; 2023 极速滑雪挑战版. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Status Panel -->
+    <div class="status-panel" id="status-panel">
+        <div class="status-row">
+            <span class="status-label">当前玩家:</span>
+            <span class="status-value" id="panel-username">Guest</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">最高分数:</span>
+            <span class="status-value" id="panel-score">0</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">已完成关卡:</span>
+            <span class="status-value" id="panel-completed">0/3</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">解锁徽章:</span>
+            <span class="status-value" id="panel-badges">0/10</span>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="login-modal">
+        <div class="modal-box">
+            <span class="modal-close" onclick="closeModal('login')">&times;</span>
+            <h3 class="modal-title">用户登录</h3>
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" class="form-input" id="login-username" placeholder="输入用户名">
+            </div>
+            <button class="btn btn-primary" style="width: 100%" onclick="handleLogin()">登录</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="register-modal">
+        <div class="modal-box">
+            <span class="modal-close" onclick="closeModal('register')">&times;</span>
+            <h3 class="modal-title">注册账号</h3>
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" class="form-input" id="reg-username" placeholder="设置用户名">
+            </div>
+            <div class="form-group">
+                <label>邮箱</label>
+                <input type="email" class="form-input" id="reg-email" placeholder="输入邮箱">
+            </div>
+            <button class="btn btn-primary" style="width: 100%" onclick="handleRegister()">开启挑战之旅</button>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container">
+        <div class="close-game" onclick="stopGame()">退出游戏 ✕</div>
+        <div class="game-ui">
+            得分: <span id="game-score">0</span>
+        </div>
+        <canvas id="game-canvas"></canvas>
+        
+        <div class="game-over-modal" id="game-over-modal">
+            <h2 style="margin-bottom: 10px; color: var(--dark);">挑战结束</h2>
+            <p style="font-size: 40px; font-weight: bold; color: var(--primary); margin: 20px 0;" id="final-score">0</p>
+            <p style="color: #666; margin-bottom: 20px;" id="score-message">不错，继续加油！</p>
+            <button class="btn btn-primary" onclick="restartGame()">再试一次</button>
+            <button class="btn btn-outline" onclick="stopGame()" style="margin-top: 10px;">返回主页</button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // --- Data & State Management ---
+        const DB_KEY = 'skiGameUser_v2'; // Updated version key
+        
+        const coursesData = [
+            { 
+                id: 1, 
+                title: "双板基础特训", 
+                unlockScore: 0, 
+                completeScore: 500, 
+                image: "https://images.unsplash.com/photo-1565992441121-4367c2967103?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
+                desc: "新手入门必修课。在这里你将掌握基础的滑行技巧，避开障碍物，迈出成为滑雪大师的第一步。" 
+            },
+            { 
+                id: 2, 
+                title: "单板花式进阶", 
+                unlockScore: 1000, 
+                completeScore: 2000, 
+                image: "https://images.unsplash.com/photo-1522056615691-da7b8106c665?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
+                desc: "进阶挑战，速度更快，障碍更密集。需要灵活的反应能力来解锁单板花式动作。" 
+            },
+            { 
+                id: 3, 
+                title: "极限野雪挑战", 
+                unlockScore: 3000, 
+                completeScore: 5000, 
+                image: "https://images.unsplash.com/photo-1518096302484-9357471e84d4?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
+                desc: "顶级难度，征服未知的极限雪域。只有真正的滑雪大师才能在这里生存并完成挑战。" 
+            }
+        ];
+
+        const badgesData = [
+            { id: 'first_slide', name: '初次滑行', icon: '🏂', desc: '完成第一次游戏' },
+            { id: 'score_500', name: '入门滑手', icon: '🥉', desc: '单局达到500分' },
+            { id: 'score_1000', name: '进阶挑战', icon: '🥈', desc: '单局达到1000分' },
+            { id: 'score_2000', name: '雪场精英', icon: '🥇', desc: '单局达到2000分' },
+            { id: 'score_5000', name: '极限大师', icon: '👑', desc: '单局达到5000分' },
+            { id: 'unlock_all', name: '全域解锁', icon: '🔓', desc: '解锁所有关卡' },
+            { id: 'complete_1', name: '双板毕业', icon: '🎓', desc: '完成关卡1目标' },
+            { id: 'complete_2', name: '单板毕业', icon: '🛹', desc: '完成关卡2目标' },
+            { id: 'complete_3', name: '野雪征服', icon: '🏔️', desc: '完成关卡3目标' },
+            { id: 'veteran', name: '老练滑手', icon: '⭐', desc: '累计游戏次数达10次' }
+        ];
+
+        let currentUser = {
+            id: null,
+            username: 'Guest',
+            email: null,
+            highScore: 0,
+            totalGames: 0,
+            completedCourses: [],
+            unlockedBadges: [],
+            regDate: null
+        };
+
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            loadUser();
+            renderCourses();
+            renderBadges();
+            updateUI();
+        });
+
+        function loadUser() {
+            const saved = localStorage.getItem(DB_KEY);
+            if (saved) {
+                try {
+                    currentUser = JSON.parse(saved);
+                    showToast(`欢迎回来, ${currentUser.username}!`, 'info');
+                } catch (e) {
+                    console.error("Data corruption", e);
+                    localStorage.removeItem(DB_KEY);
+                }
+            }
+        }
+
+        function saveUser() {
+            if (currentUser.id) { // Only save if registered/logged in
+                localStorage.setItem(DB_KEY, JSON.stringify(currentUser));
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            // Header
+            const authBtns = document.getElementById('auth-buttons');
+            const userInfo = document.getElementById('user-display');
+            
+            if (currentUser.id) {
+                authBtns.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                document.getElementById('username-display').textContent = currentUser.username;
+                document.getElementById('user-avatar').textContent = currentUser.username.charAt(0).toUpperCase();
+                document.getElementById('status-panel').style.display = 'block';
+            } else {
+                authBtns.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+                document.getElementById('status-panel').style.display = 'none';
+            }
+
+            // Status Panel
+            document.getElementById('panel-username').textContent = currentUser.username;
+            document.getElementById('panel-score').textContent = currentUser.highScore;
+            document.getElementById('panel-completed').textContent = `${currentUser.completedCourses.length}/${coursesData.length}`;
+            document.getElementById('panel-badges').textContent = `${currentUser.unlockedBadges.length}/${badgesData.length}`;
+
+            // Re-render dynamic components
+            renderCourses();
+            renderBadges();
+        }
+
+        // --- Rendering ---
+        function renderCourses() {
+            const grid = document.getElementById('course-grid');
+            grid.innerHTML = '';
+
+            coursesData.forEach(course => {
+                const isUnlocked = currentUser.highScore >= course.unlockScore;
+                const isCompleted = currentUser.completedCourses.includes(course.id) || (currentUser.highScore >= course.completeScore);
+                
+                // Auto-mark complete if score met (data sync)
+                if(currentUser.highScore >= course.completeScore && !currentUser.completedCourses.includes(course.id)) {
+                    if(currentUser.id) {
+                        currentUser.completedCourses.push(course.id);
+                        saveUser();
+                    }
+                }
+
+                let statusClass = isUnlocked ? (isCompleted ? 'completed' : '') : 'locked';
+                let btnText = isCompleted ? '已完成 ✓' : (isUnlocked ? '开始挑战' : `🔒 需${course.unlockScore}分解锁`);
+                let btnClass = isUnlocked ? 'btn-primary' : 'btn-disabled';
+                let btnAction = isUnlocked ? `onclick="startGame(${course.id})"` : '';
+                
+                // Progress calculation
+                let progress = 0;
+                if (isCompleted) progress = 100;
+                else if (isUnlocked) {
+                    progress = Math.min(100, (currentUser.highScore / course.completeScore) * 100);
+                }
+
+                const html = `
+                    <div class="course-card ${statusClass}">
+                        <div class="card-image" style="background-image: url('${course.image}')"></div>
+                        <div class="card-content">
+                            <div class="card-title">
+                                ${course.title}
+                                <span class="status-badge ${isUnlocked ? (isCompleted ? 'status-done' : 'status-active') : 'status-locked'}">
+                                    ${isCompleted ? '已完成' : (isUnlocked ? '进行中' : '未解锁')}
+                                </span>
+                            </div>
+                            <p class="card-desc">${course.desc}</p>
+                            
+                            <div class="level-progress">
+                                <div class="progress-label">
+                                    <span>进度</span>
+                                    <span>${currentUser.highScore}/${course.completeScore} 分</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+
+                            <button class="btn ${btnClass}" style="width: 100%" ${btnAction}>${btnText}</button>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += html;
+            });
+        }
+
+        function renderBadges() {
+            const grid = document.getElementById('badge-grid');
+            grid.innerHTML = '';
+
+            badgesData.forEach(badge => {
+                const isUnlocked = currentUser.unlockedBadges.includes(badge.id);
+                const html = `
+                    <div class="badge-item ${isUnlocked ? 'unlocked' : ''}">
+                        <div class="badge-icon">${badge.icon}</div>
+                        <div class="badge-name">${badge.name}</div>
+                        <div class="badge-tooltip">${badge.desc}<br>${isUnlocked ? '(已获得)' : '(未获得)'}</div>
+                    </div>
+                `;
+                grid.innerHTML += html;
+            });
+        }
+
+        // --- Auth Logic ---
+        function openModal(type) {
+            document.getElementById(`${type}-modal`).style.display = 'flex';
+        }
+
+        function closeModal(type) {
+            document.getElementById(`${type}-modal`).style.display = 'none';
+        }
+
+        function handleLogin() {
+            const username = document.getElementById('login-username').value;
+            if(!username) return showToast('请输入用户名', 'error');
+            
+            // Simple simulation of login (In real app, check password)
+            // Here we just check if data exists or create temp session
+            if(currentUser.username === 'Guest') {
+                currentUser.id = Date.now().toString();
+                currentUser.username = username;
+                currentUser.regDate = new Date().toISOString();
+                saveUser();
+                showToast('登录成功!', 'success');
+                closeModal('login');
+            }
+        }
+
+        function handleRegister() {
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            
+            if(!username || !email) return showToast('请填写完整信息', 'error');
+            
+            currentUser = {
+                id: Date.now().toString(),
+                username: username,
+                email: btoa(email), // Simple hash for privacy
+                highScore: 0,
+                totalGames: 0,
+                completedCourses: [],
+                unlockedBadges: [],
+                regDate: new Date().toISOString()
+            };
+            
+            saveUser();
+            showToast('注册成功! 开始你的挑战吧', 'success');
+            closeModal('register');
+        }
+
+        function logout() {
+            localStorage.removeItem(DB_KEY);
+            location.reload();
+        }
+
+        // --- Game Engine ---
+        let gameRunning = false;
+        let score = 0;
+        let gameLoopId;
+        let canvas, ctx;
+        let player = { x: 0, y: 0, width: 30, height: 30, speed: 5 };
+        let obstacles = [];
+        let keys = {};
+        let difficultyMultiplier = 1;
+
+        function startGame(levelId) {
+            if(!currentUser.id) {
+                showToast('请先登录以保存进度', 'info');
+                openModal('login');
+                return;
+            }
+
+            document.getElementById('game-container').style.display = 'flex';
+            document.getElementById('game-over-modal').style.display = 'none';
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Resize canvas
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Reset Game State
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 4;
+            score = 0;
+            obstacles = [];
+            gameRunning = true;
+            
+            // Set difficulty based on level
+            difficultyMultiplier = 1 + (levelId * 0.5); // 1.5, 2.0, 2.5
+            
+            window.addEventListener('keydown', e => keys[e.key] = true);
+            window.addEventListener('keyup', e => keys[e.key] = false);
+            
+            // Mobile Touch Controls
+            canvas.addEventListener('touchmove', handleTouch);
+            
+            gameLoop();
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            const touchX = e.touches[0].clientX;
+            if(touchX < canvas.width / 2) {
+                keys['ArrowLeft'] = true; keys['ArrowRight'] = false;
+            } else {
+                keys['ArrowRight'] = true; keys['ArrowLeft'] = false;
+            }
+        }
+
+        function stopGame() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoopId);
+            document.getElementById('game-container').style.display = 'none';
+            updateUI(); // Refresh UI on exit
+        }
+        
+        function restartGame() {
+            document.getElementById('game-over-modal').style.display = 'none';
+            score = 0;
+            obstacles = [];
+            gameRunning = true;
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update Player
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed * 1.5;
+            if (keys['ArrowRight'] && player.x < canvas.width - player.width) player.x += player.speed * 1.5;
+
+            // Draw Player (Skier)
+            ctx.fillStyle = '#ff6b6b';
+            ctx.beginPath();
+            ctx.moveTo(player.x + 15, player.y);
+            ctx.lineTo(player.x + 30, player.y + 30);
+            ctx.lineTo(player.x, player.y + 30);
+            ctx.fill();
+            // Skis
+            ctx.fillStyle = '#333';
+            ctx.fillRect(player.x, player.y + 25, 5, 20);
+            ctx.fillRect(player.x + 25, player.y + 25, 5, 20);
+
+            // Generate Obstacles
+            if (Math.random() < 0.05 * difficultyMultiplier) {
+                obstacles.push({
+                    x: Math.random() * canvas.width,
+                    y: canvas.height + 50,
+                    width: 30 + Math.random() * 20,
+                    height: 40 + Math.random() * 30,
+                    type: Math.random() > 0.8 ? 'rock' : 'tree'
+                });
+            }
+
+            // Update & Draw Obstacles
+            ctx.fillStyle = '#2d5a27'; // Tree color
+            obstacles.forEach((obs, index) => {
+                obs.y -= (5 + (score / 500)) * difficultyMultiplier; // Speed increases with score
+
+                // Draw
+                if(obs.type === 'tree') {
+                    ctx.fillStyle = '#2d5a27';
+                    ctx.beginPath();
+                    ctx.moveTo(obs.x + obs.width/2, obs.y);
+                    ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+                    ctx.lineTo(obs.x, obs.y + obs.height);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = '#888';
+                    ctx.beginPath();
+                    ctx.arc(obs.x + obs.width/2, obs.y + obs.height/2, obs.width/2, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // Collision Detection
+                if (
+                    player.x < obs.x + obs.width &&
+                    player.x + player.width > obs.x &&
+                    player.y < obs.y + obs.height &&
+                    player.y + player.height > obs.y
+                ) {
+                    gameOver();
+                }
+
+                // Remove off-screen
+                if (obs.y < -50) {
+                    obstacles.splice(index, 1);
+                    score += 10;
+                }
+            });
+
+            // Score
+            score++;
+            document.getElementById('game-score').textContent = Math.floor(score);
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            const finalScore = Math.floor(score);
+            document.getElementById('final-score').textContent = finalScore;
+            document.getElementById('game-over-modal').style.display = 'block';
+            
+            processGameResult(finalScore);
+        }
+
+        // --- Logic Integration ---
+        function processGameResult(score) {
+            let newUnlocks = [];
+            let newBadges = [];
+
+            // Update High Score
+            if (score > currentUser.highScore) {
+                currentUser.highScore = score;
+                document.getElementById('score-message').textContent = "新纪录！太棒了！";
+            } else {
+                document.getElementById('score-message').textContent = "继续加油，挑战更高分！";
+            }
+
+            currentUser.totalGames++;
+
+            // Check Badges
+            checkBadge('first_slide', true);
+            if (score >= 500) checkBadge('score_500');
+            if (score >= 1000) checkBadge('score_1000');
+            if (score >= 2000) checkBadge('score_2000');
+            if (score >= 5000) checkBadge('score_5000');
+            if (currentUser.totalGames >= 10) checkBadge('veteran');
+
+            // Check Course Completion & Unlocks
+            coursesData.forEach(course => {
+                // Completion
+                if (score >= course.completeScore && !currentUser.completedCourses.includes(course.id)) {
+                    currentUser.completedCourses.push(course.id);
+                    checkBadge(`complete_${course.id}`);
+                    showToast(`恭喜！完成关卡：${course.title}`, 'success');
+                }
+                
+                // Unlocks (Just notification, logic is in render)
+                if (currentUser.highScore >= course.unlockScore) {
+                    // Logic handled in render, but could toast if just crossed threshold
+                }
+            });
+
+            // Check All Unlocked Badge
+            if (currentUser.completedCourses.length === coursesData.length) checkBadge('unlock_all');
+
+            saveUser();
+        }
+
+        function checkBadge(id, condition = true) {
+            if (condition && !currentUser.unlockedBadges.includes(id)) {
+                currentUser.unlockedBadges.push(id);
+                const badge = badgesData.find(b => b.id === id);
+                showToast(`解锁徽章: ${badge.name} ${badge.icon}`, 'success');
+            }
+        }
+
+        // --- Utilities ---
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = 'ℹ️';
+            if(type === 'success') icon = '✅';
+            if(type === 'error') icon = '⚠️';
+
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-content">
+                    <h4>${type === 'success' ? '成功' : '提示'}</h4>
+                    <p>${msg}</p>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.3s reverse forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function scrollToCourses() {
+            document.getElementById('courses').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
